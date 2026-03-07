@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { generatePage } from '../api';
+import { useVoiceInput } from '../hooks/useVoiceInput';
+import { useTTS } from '../hooks/useTTS';
 import './BookViewer.css';
 
 function BookViewer({ story, onBack, onStoryComplete }) {
@@ -16,6 +18,23 @@ function BookViewer({ story, onBack, onStoryComplete }) {
     title: story?.memory?.title || '',
     cover_image: story?.memory?.cover_image || '',
   });
+  const voice = useVoiceInput();
+  const tts = useTTS();
+  const hasPlayedFirst = useRef(false);
+
+  useEffect(() => {
+    if (voice.transcript) {
+      setContinueText(voice.transcript);
+    }
+  }, [voice.transcript]);
+
+  // Auto-play TTS for the first page on mount
+  useEffect(() => {
+    if (!hasPlayedFirst.current && pages.length > 0 && pages[0].text) {
+      hasPlayedFirst.current = true;
+      tts.play(pages[0].text);
+    }
+  }, []);
 
   if (!story) return null;
 
@@ -47,7 +66,12 @@ function BookViewer({ story, onBack, onStoryComplete }) {
       const res = await generatePage({ story_id: storyId, user_action: continueText });
       setPages(res.memory.pages);
       setContinueText('');
+      voice.resetTranscript();
       setCurrentPage(res.memory.pages.length - 1);
+
+      if (res.page_text) {
+        tts.play(res.page_text);
+      }
 
       if (res.story_complete) {
         setCompleted(true);
@@ -185,15 +209,31 @@ function BookViewer({ story, onBack, onStoryComplete }) {
       {/* Continue story — only on last page of an active story */}
       {isLastPage && !completed && (
         <div className="continue-section">
-          <input
-            className="continue-input"
-            type="text"
-            placeholder="What happens next?"
-            value={continueText}
-            onChange={(e) => setContinueText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleContinue()}
+          <button
+            className={`continue-mic-btn ${voice.isListening ? 'continue-mic-btn--listening' : ''}`}
+            onClick={() => voice.isListening ? voice.stopListening() : voice.startListening()}
             disabled={isGenerating}
-          />
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+            </svg>
+          </button>
+
+          <div className="continue-transcript">
+            {continueText && !voice.isListening && (
+              <span className="continue-transcript-final">{continueText}</span>
+            )}
+            {voice.isListening && (
+              <span className="continue-transcript-interim">
+                {voice.interimTranscript || 'Listening...'}
+              </span>
+            )}
+            {!continueText && !voice.isListening && (
+              <span className="continue-transcript-hint">What happens next?</span>
+            )}
+          </div>
+
           <button
             className="continue-button"
             onClick={handleContinue}
@@ -201,6 +241,8 @@ function BookViewer({ story, onBack, onStoryComplete }) {
           >
             {isGenerating ? 'Generating...' : 'Continue Story'}
           </button>
+
+          {voice.error && <p className="continue-voice-error">{voice.error}</p>}
         </div>
       )}
 

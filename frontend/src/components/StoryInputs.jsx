@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generatePage } from '../api';
+import { useVoiceInput } from '../hooks/useVoiceInput';
 import './StoryInputs.css';
 
 const STEPS = [
@@ -69,14 +70,19 @@ function StoryInputs({ onBack, onGenerate }) {
   const [answers, setAnswers] = useState({ who: '', where: '', how: '' });
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
-  const inputRef = useRef(null);
+  const voice = useVoiceInput();
 
   const current = STEPS[step];
 
   useEffect(() => {
-    const t = setTimeout(() => inputRef.current?.focus(), 320);
-    return () => clearTimeout(t);
+    voice.resetTranscript();
   }, [step]);
+
+  useEffect(() => {
+    if (voice.transcript) {
+      setAnswers((prev) => ({ ...prev, [current.id]: voice.transcript }));
+    }
+  }, [voice.transcript]);
 
   const goNext = async () => {
     if (step < STEPS.length - 1) {
@@ -152,19 +158,34 @@ function StoryInputs({ onBack, onGenerate }) {
             {/* Question */}
             <h2 className="si-question">{current.question}</h2>
 
-            {/* Input */}
-            <input
-              ref={inputRef}
-              className="si-input"
-              type="text"
-              placeholder={current.placeholder}
-              value={answers[current.id]}
-              onChange={(e) =>
-                setAnswers((prev) => ({ ...prev, [current.id]: e.target.value }))
-              }
-              onKeyDown={(e) => e.key === 'Enter' && canAdvance && goNext()}
-              style={{ '--focus-color': current.color }}
-            />
+            {/* Voice input */}
+            <button
+              className={`si-mic-btn ${voice.isListening ? 'si-mic-btn--listening' : ''}`}
+              onClick={() => voice.isListening ? voice.stopListening() : voice.startListening()}
+              disabled={isGenerating}
+              style={{ '--mic-color': current.color }}
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+              </svg>
+            </button>
+
+            <div className="si-transcript" style={{ '--mic-color': current.color }}>
+              {answers[current.id] && !voice.isListening && (
+                <p className="si-transcript-final">{answers[current.id]}</p>
+              )}
+              {voice.isListening && (
+                <p className="si-transcript-interim">
+                  {voice.interimTranscript || 'Listening...'}
+                </p>
+              )}
+              {!answers[current.id] && !voice.isListening && (
+                <p className="si-transcript-hint">{current.placeholder}</p>
+              )}
+            </div>
+
+            {voice.error && <p className="si-error">{voice.error}</p>}
 
             {/* CTA */}
             <motion.button

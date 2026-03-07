@@ -38,6 +38,20 @@ export async function getStory(storyId) {
 }
 
 /**
+ * Fetch TTS audio for the given text.
+ * Returns an audio Blob (audio/mpeg).
+ */
+export async function fetchTTS(text) {
+  const res = await fetch(`${BASE}/tts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error(`TTS failed (${res.status})`);
+  return res.blob();
+}
+
+/**
  * List all stories on the server.
  */
 export async function listStories() {

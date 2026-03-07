@@ -50,23 +50,34 @@ API client in `src/api.js` wraps all backend calls (`generatePage`, `getStory`, 
 
 Python FastAPI server in `backend/`.
 
-**State machine** — each story session is a `StoryMemory` Pydantic model (defined in `models.py`) containing: `story_id`, `theme_and_style`, `quest`, `current_state` (location + inventory), `running_summary`, `pages` (text + image history), and completion fields (`completed`, `title`, `cover_image`).
+**State machine** — each story session is a `StoryMemory` Pydantic model (defined in `models.py`) containing: `story_id`, `theme_and_style`, `quest`, `current_state` (location + inventory), `running_summary`, `pages` (text + image history), `characters` (tracked characters with visual descriptions and portraits), and completion fields (`completed`, `title`, `cover_image`).
 
-**Core agent pipeline** (`agent.py`) — five async functions. Per page turn, the server runs steps 1-4 in sequence:
+**Core agent pipeline** (`agent.py`) — seven async functions. Per page turn, the server runs steps 1-5 in sequence:
 
-1. `draft_text(memory, user_action)` — Gemini generates 2-3 sentences of narrative. Prompt includes the quest and allows writing conclusions when the quest is naturally resolved (not just cliffhangers).
-2. `draft_image(page_text, theme_and_style)` — Two-step: extracts a visual prompt via light model, then generates illustration via image model. Returns base64 data-URI. Fails gracefully (empty string).
-3. `summarize_and_save(memory, new_page_text)` — Lightweight model compresses page into running summary and updates location/inventory via JSON extraction.
-4. `check_quest_complete(memory)` — Compares running summary + latest page text against the original quest. Returns bool. Only runs after page 1.
-5. `generate_cover(memory)` — Generates a title (3-6 words) and cover illustration. Called only when quest is complete.
+1. `draft_text(memory, user_action)` — Gemini generates 2-3 sentences of narrative. Prompt includes the quest and allows writing conclusions when the quest is naturally resolved.
+2. `extract_new_characters(page_text, existing_characters, theme_and_style)` — Identifies characters not already tracked; returns `Character` objects with detailed visual descriptions for cross-page consistency.
+3. `draft_image(page_text, theme_and_style, characters)` — Two-step: extracts a visual prompt via light model (incorporating character visual references), then generates illustration via image model. Returns base64 data-URI. Fails gracefully (empty string).
+4. `generate_character_portrait(character, theme_and_style)` — Generates a portrait for each newly introduced character. Called per new character after image generation.
+5. `summarize_and_save(memory, new_page_text)` — Lightweight model compresses page into running summary and updates location/inventory via JSON extraction.
+6. `check_quest_complete(memory)` — Compares running summary + latest page text against the original quest. Returns bool. Only runs after page 1.
+7. `generate_cover(memory)` — Generates a title (3-6 words) and cover illustration. Called only when quest is complete.
 
-All Gemini SDK calls use `asyncio.to_thread` to avoid blocking the event loop.
+All Gemini SDK calls use `asyncio.to_thread` to avoid blocking the event loop. The Gemini client is lazily initialized in `_get_client()`.
 
 **Server** (`server.py`) — FastAPI app with CORS. Sessions stored in an in-memory dict (swap for DB later). Key endpoints:
-- `POST /api/generate` — full page-turn cycle (text → image → summarize → quest check → optional cover)
+- `POST /api/generate` — full page-turn cycle (text → character extraction → image → portraits → summarize → quest check → optional cover). Returns `GenerateResponse` including the full `memory` object.
 - `GET /api/stories` — lightweight list of all sessions (id, title, page count, completed, cover_image)
 - `GET /api/story/{id}` — full StoryMemory dump
 - `POST /api/story/{id}/continue` — convenience wrapper
+
+### Data Models (`models.py`)
+
+- `PageEntry` — text + image_url (base64 data-URI)
+- `CurrentState` — location + inventory list
+- `Character` — name + visual_description + portrait (base64 data-URI)
+- `StoryMemory` — the complete session state; all agent functions read/update this
+- `GenerateRequest` — frontend payload (story_id, user_action, who/where/how)
+- `GenerateResponse` — server response (story_id, page_text, page_image, page_number, memory, story_complete)
 
 ## Styling
 
@@ -83,5 +94,6 @@ All Gemini SDK calls use `asyncio.to_thread` to avoid blocking the event loop.
 - Frontend animation: framer-motion for transitions, @tsparticles for particle effects
 - Backend: Python 3.12+, Pydantic v2, `google-genai` SDK, async via `asyncio.to_thread`
 - ESLint flat config with `no-unused-vars` ignoring `^[A-Z_]` pattern (note: `motion` used as `<motion.div>` triggers false-positive unused-var warnings — this is a known ESLint limitation)
-- Gemini models: `gemini-2.5-flash` (text), `gemini-2.0-flash` (summarisation/quest eval), `gemini-2.0-flash-exp-image-generation` (images) — constants at top of `agent.py`
+- Gemini models: `gemini-2.5-flash` (text), `gemini-2.0-flash` (summarisation/extraction/quest eval), `gemini-2.0-flash-exp-image-generation` (images) — constants at top of `agent.py`
 - Environment: `GEMINI_API_KEY` in `backend/.env`
+- Pydantic `model_copy(update={...})` is used throughout to produce updated StoryMemory instances immutably

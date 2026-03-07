@@ -104,30 +104,75 @@
   letter-spacing: -0.5px;
 }
 
-/* Text input */
-.si-input {
-  width: 100%;
+/* Mic button */
+.si-mic-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
   background: rgba(255, 255, 255, 0.06);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
-  padding: 20px 28px;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.si-mic-btn:hover {
+  border-color: var(--mic-color);
+  color: var(--mic-color);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.si-mic-btn--listening {
+  border-color: var(--mic-color);
+  color: var(--mic-color);
+  background: color-mix(in srgb, var(--mic-color) 15%, transparent);
+  animation: mic-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--mic-color) 30%, transparent); }
+  50% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--mic-color) 0%, transparent); }
+}
+
+/* Transcript display */
+.si-transcript {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.si-transcript-final {
   font-family: 'Nunito', sans-serif;
   font-size: 20px;
   font-weight: 500;
   color: #ffffff;
   text-align: center;
-  outline: none;
-  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+  margin: 0;
 }
 
-.si-input::placeholder {
+.si-transcript-interim {
+  font-family: 'Nunito', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--mic-color);
+  text-align: center;
+  margin: 0;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.si-transcript-hint {
+  font-family: 'Nunito', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
   color: rgba(255, 255, 255, 0.28);
-}
-
-.si-input:focus {
-  border-color: var(--focus-color);
-  background: rgba(255, 255, 255, 0.09);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus-color) 15%, transparent);
+  text-align: center;
+  margin: 0;
 }
 
 /* CTA button */
