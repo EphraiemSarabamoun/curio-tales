@@ -4,7 +4,22 @@
       "Bash(npm create vite@latest . -- --template react)",
       "Bash(npm create vite@latest curio-tales -- --template react)",
       "Bash(npm install)",
-      "Bash(npx vite --port 5173)"
+      "Bash(npx vite --port 5173)",
+      "Bash(cd /Users/fatherdomadious/Desktop/curio-tales/backend && pip install -r requirements.txt 2>&1 | tail -20)",
+      "Bash(python -c \"import models; import agent; import server; print\\('All imports OK'\\)\")",
+      "Bash(pip show google-generativeai 2>/dev/null | head -5 && python -c \"import google.generativeai as genai; print\\('OK:', genai.__version__\\)\" 2>&1)",
+      "Bash(pip install google-genai 2>&1 | tail -10)",
+      "Bash(python -c \"from google import genai; print\\('genai OK'\\); from google.genai import types; print\\('types OK'\\)\" 2>&1)",
+      "Bash(python -c \"import models; import agent; import server; print\\('All imports OK'\\)\" 2>&1)",
+      "Bash(sleep 2 && curl -s http://127.0.0.1:8000/api/stories)",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/generate \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"who\":\"a curious fox named Maple\",\"where\":\"in a magical forest\",\"how\":\"they find a hidden library of ancient stories\"}' \\\\\n  | python -m json.tool 2>&1 | head -30)",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/generate \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"who\":\"a curious fox named Maple\",\"where\":\"in a magical forest\",\"how\":\"they find a hidden library of ancient stories\"}' \\\\\n  -w \"\\\\nHTTP_STATUS: %{http_code}\\\\n\" 2>&1)",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/generate \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"who\":\"a curious fox named Maple\",\"where\":\"in a magical forest\",\"how\":\"they find a hidden library of ancient stories\"}' 2>&1)",
+      "Bash(lsof -i :8000 2>/dev/null | head -5)",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/generate \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"who\":\"a curious fox named Maple\",\"where\":\"in a magical forest\",\"how\":\"they find a hidden library\"}' 2>&1 | python -c \"\nimport sys, json\ndata = json.load\\(sys.stdin\\)\nprint\\('story_id:', data['story_id']\\)\nprint\\('page_number:', data['page_number']\\)\nprint\\('text preview:', data['page_text'][:150], '...'\\)\nprint\\('image_url length:', len\\(data['page_image']\\), 'chars'\\)\nprint\\('pages in memory:', len\\(data['memory']['pages']\\)\\)\nprint\\('running_summary:', data['memory']['running_summary'][:100], '...'\\)\n\")",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/generate \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"story_id\":\"d51ace454397\",\"user_action\":\"Maple touches the glowing stone with her paw\"}' 2>&1 | python -c \"\nimport sys, json\ndata = json.load\\(sys.stdin\\)\nprint\\('page_number:', data['page_number']\\)\nprint\\('text preview:', data['page_text'][:150], '...'\\)\nprint\\('has image:', len\\(data['page_image']\\) > 0\\)\nprint\\('pages total:', len\\(data['memory']['pages']\\)\\)\nprint\\('location:', data['memory']['current_state']['location']\\)\n\")",
+      "Bash(curl -s http://127.0.0.1:8000/api/stories | python -m json.tool)",
+      "Bash(cp -a /Users/fatherdomadious/Desktop/curio-tales/curio-tales/. /Users/fatherdomadious/Desktop/curio-tales/frontend/)"
     ]
   }
 }
