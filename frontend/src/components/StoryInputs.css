@@ -152,3 +152,10 @@
   cursor: default;
   box-shadow: none;
 }
+
+.si-error {
+  color: #ff6b6b;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  margin: 0;
+}

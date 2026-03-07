@@ -19,7 +19,9 @@
       "Bash(curl -s -X POST http://127.0.0.1:8000/api/generate \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"who\":\"a curious fox named Maple\",\"where\":\"in a magical forest\",\"how\":\"they find a hidden library\"}' 2>&1 | python -c \"\nimport sys, json\ndata = json.load\\(sys.stdin\\)\nprint\\('story_id:', data['story_id']\\)\nprint\\('page_number:', data['page_number']\\)\nprint\\('text preview:', data['page_text'][:150], '...'\\)\nprint\\('image_url length:', len\\(data['page_image']\\), 'chars'\\)\nprint\\('pages in memory:', len\\(data['memory']['pages']\\)\\)\nprint\\('running_summary:', data['memory']['running_summary'][:100], '...'\\)\n\")",
       "Bash(curl -s -X POST http://127.0.0.1:8000/api/generate \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"story_id\":\"d51ace454397\",\"user_action\":\"Maple touches the glowing stone with her paw\"}' 2>&1 | python -c \"\nimport sys, json\ndata = json.load\\(sys.stdin\\)\nprint\\('page_number:', data['page_number']\\)\nprint\\('text preview:', data['page_text'][:150], '...'\\)\nprint\\('has image:', len\\(data['page_image']\\) > 0\\)\nprint\\('pages total:', len\\(data['memory']['pages']\\)\\)\nprint\\('location:', data['memory']['current_state']['location']\\)\n\")",
       "Bash(curl -s http://127.0.0.1:8000/api/stories | python -m json.tool)",
-      "Bash(cp -a /Users/fatherdomadious/Desktop/curio-tales/curio-tales/. /Users/fatherdomadious/Desktop/curio-tales/frontend/)"
+      "Bash(cp -a /Users/fatherdomadious/Desktop/curio-tales/curio-tales/. /Users/fatherdomadious/Desktop/curio-tales/frontend/)",
+      "Bash(cd /Users/fatherdomadious/Desktop/curio-tales/frontend && npm run build 2>&1)",
+      "Bash(npm run lint 2>&1)"
     ]
   }
 }
