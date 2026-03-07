@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import Library from './components/Library';
+import Welcome from './components/Welcome';
 import StoryInputs from './components/StoryInputs';
 import BookViewer from './components/BookViewer';
 import './App.css';
+import './components/Welcome.css';
 
 function App() {
-  const [page, setPage] = useState('library');
+  const [page, setPage] = useState('welcome');
   const [storyData, setStoryData] = useState(null);
 
   const goToInputs = () => setPage('inputs');
-  const goToLibrary = () => setPage('library');
+  const goToWelcome = () => setPage('welcome');
   const goToViewer = (data) => {
     setStoryData(data);
     setPage('viewer');
@@ -17,9 +18,9 @@ function App() {
 
   return (
     <div className="app">
-      {page === 'library' && <Library onAddNew={goToInputs} onSelectBook={goToViewer} />}
-      {page === 'inputs' && <StoryInputs onBack={goToLibrary} onGenerate={goToViewer} />}
-      {page === 'viewer' && <BookViewer story={storyData} onBack={goToLibrary} />}
+      {page === 'welcome' && <Welcome onStart={goToInputs} />}
+      {page === 'inputs' && <StoryInputs onBack={goToWelcome} onGenerate={goToViewer} />}
+      {page === 'viewer' && <BookViewer story={storyData} onBack={goToWelcome} />}
     </div>
   );
 }
