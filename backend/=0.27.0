@@ -1,0 +1,10 @@
+Requirement already satisfied: httpx in /opt/anaconda3/lib/python3.12/site-packages (0.28.1)
+Requirement already satisfied: anyio in /opt/anaconda3/lib/python3.12/site-packages (from httpx) (4.12.1)
+Requirement already satisfied: certifi in /opt/anaconda3/lib/python3.12/site-packages (from httpx) (2022.12.7)
+Requirement already satisfied: httpcore==1.* in /opt/anaconda3/lib/python3.12/site-packages (from httpx) (1.0.2)
+Requirement already satisfied: idna in /opt/anaconda3/lib/python3.12/site-packages (from httpx) (3.7)
+Requirement already satisfied: h11<0.15,>=0.13 in /opt/anaconda3/lib/python3.12/site-packages (from httpcore==1.*->httpx) (0.14.0)
+Requirement already satisfied: typing_extensions>=4.5 in /opt/anaconda3/lib/python3.12/site-packages (from anyio->httpx) (4.12.2)
+
+[notice] A new release of pip is available: 25.1.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip

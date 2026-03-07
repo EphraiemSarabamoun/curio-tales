@@ -56,6 +56,12 @@ class StoryMemory(BaseModel):
     cover_image: str = ""
 
 
+class TTSRequest(BaseModel):
+    """Payload for text-to-speech generation."""
+
+    text: str
+
+
 class GenerateRequest(BaseModel):
     """Payload the frontend sends to kick off a new page."""
 

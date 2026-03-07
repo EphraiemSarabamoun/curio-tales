@@ -28,7 +28,8 @@
       "Bash(python -c \"from server import app; print\\('OK'\\)\" 2>&1)",
       "Bash(python -c \"from server import app; print\\('OK'\\)\")",
       "Bash(cd /Users/fatherdomadious/Desktop/curio-tales/frontend && npx eslint src/components/BookViewer.jsx 2>&1 | head -20)",
-      "Bash(npx eslint src/components/BookViewer.jsx 2>&1)"
+      "Bash(npx eslint src/components/BookViewer.jsx 2>&1)",
+      "Bash(cd /Users/fatherdomadious/Desktop/curio-tales/frontend && npx vite build 2>&1 | tail -15)"
     ]
   }
 }
