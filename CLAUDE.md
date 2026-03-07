@@ -2,100 +2,79 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Overview
+
+Curio Tales is an interactive storybook app. Users describe a character, setting, and ending direction — the backend generates narrative text and illustrations via Google Gemini, displayed in a book-viewer UI.
+
 ## Commands
 
-All commands run from the `frontend/` directory:
+### Frontend (from `frontend/`)
 
 ```bash
-npm run dev       # Start dev server (Vite HMR)
-npm run build     # Production build
-npm run lint      # ESLint
-npm run preview   # Preview production build
+cd curio-tales
+npm install        # install dependencies
+npm run dev        # start Vite dev server with HMR (port 5173)
+npm run build      # production build to frontend/dist/
+npm run lint       # run ESLint
 ```
 
-No test framework is configured yet.
+### Backend (from `backend/`)
+
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env   # then add your GEMINI_API_KEY
+uvicorn server:app --reload --port 8000
+```
+
+Run both servers simultaneously — Vite proxies `/api` to the backend.
+
+To test the agent pipeline standalone: `python agent.py` (runs one demo page turn).
+
+No test framework configured yet.
 
 ## Architecture
 
-Curio Tales is a children's AI story generation app. Currently the frontend is a pure React + Vite SPA with no backend — story generation is mocked with hardcoded data.
+### Frontend
 
-### Navigation
+**Single-page React app** in `frontend/src/` with manual page routing via `useState` in `App.jsx`. Three views:
 
-`App.jsx` manages the entire app with a single `page` state (`'library'`, `'inputs'`, `'viewer'`). There is no router. Page transitions are done by swapping which component renders based on that state string.
+- **Library** (`components/Library.jsx`) — Fetches stories from `GET /api/stories`. Clicking a story loads its full memory via `GET /api/story/{id}` and opens the viewer.
+- **StoryInputs** (`components/StoryInputs.jsx`) — Three-prompt form (WHO/WHERE/HOW) with voice recording UI placeholder. Generate button calls `POST /api/generate` with the prompts.
+- **BookViewer** (`components/BookViewer.jsx`) — Open-book layout: AI-generated image on the left page (falls back to CSS illustration), narrative text on the right. A "Continue Story" input on the last page calls `POST /api/generate` with `story_id` + `user_action` to add pages.
 
-### Components
+API client in `src/api.js` wraps all backend calls.
 
-- **`Library`** — Grid of book cards plus an "Add New Story" card. Currently renders hardcoded `BOOKS` array; all existing books open the same `sampleStory` mock object. Calls `onAddNew` or `onSelectBook(storyData)` to navigate.
-- **`StoryInputs`** — Three-prompt form (WHO / WHERE / HOW) with text inputs and a UI-only voice record button (no actual recording). On submit, calls `onGenerate(storyData)` with hardcoded mock story data — real AI generation is not yet wired up.
-- **`BookViewer`** — Open-book layout with a left illustration page and a right text page. Illustrations are CSS-only scenes defined in the `ILLUSTRATIONS` map keyed by name (`'astronaut'`, `'spaceship'`, `'saturn'`). Page flipping uses a 500ms timeout + `isFlipping` flag to animate transitions. The "Listen to Story" audio button is UI-only.
+### Backend
 
-### Data shape
+Python FastAPI server in `backend/`.
 
-Story objects passed between components:
-```js
-{
-  title: string,
-  illustration: string,   // key into ILLUSTRATIONS map
-  pages: [{ text: string, illustration: string }]
-}
-```
+**State machine** — each story session is a `StoryMemory` Pydantic model (defined in `models.py`) containing: `story_id`, `theme_and_style`, `current_state` (location + inventory), `running_summary`, and `pages` (text + image history).
 
-### Styling
+**Core agent pipeline** (`agent.py`) — three async functions run in sequence per page turn:
 
-Each component has a co-located `.css` file. CSS custom properties (e.g. `--book-color`, `--bar-index`, `--bar-delay`) are used for per-element dynamic styling. No CSS framework or preprocessor.
+1. `draft_text(memory, user_action)` → Gemini generates ~150-200 words of narrative using running summary + world state as context.
+2. `draft_image(page_text, theme_and_style)` → Gemini extracts a visual prompt, then generates an illustration. Returns base64 data-URI. Fails gracefully (empty string).
+3. `summarize_and_save(memory, new_page_text)` → Lightweight Gemini model compresses the page into the running summary and updates location/inventory.
 
-### ESLint note
+**Server** (`server.py`) — FastAPI app with CORS for `localhost:5173`. Sessions stored in an in-memory dict (swap for DB later). Key endpoints:
+- `POST /api/generate` — full page-turn cycle
+- `GET /api/stories` — list sessions
+- `GET /api/story/{id}` — full memory dump
+- `POST /api/story/{id}/continue` — convenience wrapper
 
-`no-unused-vars` ignores names matching `/^[A-Z_]/` — uppercased constants won't trigger the rule even if unused.
+## Styling
 
+- Dark theme with CSS custom properties in `frontend/src/index.css`
+- Fonts: Inter (body) + Crimson Text (serif, book viewer) via Google Fonts
+- Co-located `.css` files per component — plain CSS, no modules/preprocessors
+- CSS-only fallback illustrations in BookViewer (gradients, shapes, animations)
+- Responsive breakpoints at 900px, 768px, 600px, 480px
 
-## Workflow Orchestration
+## Key Conventions
 
-### 1. Plan Mode Default
-- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
-- If something goes sideways, STOP and re-plan immediately - don't keep pushing
-- Use plan mode for verification steps, not just building
-- Write detailed specs upfront to reduce ambiguity
-
-### 2. Subagent Strategy
-- Use subagents liberally to keep main context window clean
-- Offload research, exploration, and parallel analysis to subagents
-- For complex problems, throw more compute at it via subagents
-- One tack per subagent for focused execution
-
-### 3. Self-Improvement Loop
-- After ANY correction from the user: update 'tasks/lessons.md" with the pattern
-- Write rules for yourself that prevent the same mistake
-- Ruthlessly iterate on these lessons until mistake rate drops
-- Review lessons at session start for relevant project
-### 4. Verification Before Done
-- Never mark a task complete without proving it works
-- Diff behavior between main and your changes when relevant
-- Ask yourself: "Would a staff engineer approve this?"
-- Run tests, check logs, demonstrate correctness
-
-### 5. Demand Elegance (Balanced)
-- For non-trivial changes: pause and ask "is there a more elegant way?"
-- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
-- Skip this for simple, obvious fixes - don't over-engineer
--Challenge your own work before presenting it
-
-### 6. Autonomous Bug Fizing
-- When given a bug report: just fix it. Don't ask for hand-holding
-- Point at logs, errors, failing tests - then resolve them
-- Zero context switching required from the user
-- Go fix failing CI tests without being told how
-
-## Task Management
-1. **Plan First**: Write plan to "tasks/todo.md" with checkable items
-2. **Verify Plan**: Check in before starting implementation
-3. **Track Progress**: Mark items complete as you go
-4. **Explain Changes**: High-level summary at each step
-5. **Document Results**: Add review section to 'tasks/todo.md"
-6. **Capture Lessons**: Update 'tasks/lessons.md' after corrections
-
-## Core Principles
-- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
-- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
-- **Minimat Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
-- **All commmits are mine** Never include sentences like "Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" in the commit messages
+- Frontend: React 19 + JSX (not TypeScript), Vite 7, ES modules
+- Backend: Python 3.12+, Pydantic v2, `google-genai` SDK, async via `asyncio.to_thread`
+- ESLint flat config with `no-unused-vars` ignoring `^[A-Z_]` pattern
+- Gemini models: `gemini-2.5-flash` (text), `gemini-2.0-flash` (summarisation), `gemini-2.0-flash-exp-image-generation` (images)
+- Environment: `GEMINI_API_KEY` in `backend/.env`
