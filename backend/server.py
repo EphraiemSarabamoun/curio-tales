@@ -21,6 +21,8 @@ from agent import (
     check_quest_complete,
     draft_image,
     draft_text,
+    extract_new_characters,
+    generate_character_portrait,
     generate_cover,
     summarize_and_save,
 )
@@ -123,8 +125,31 @@ async def generate(req: GenerateRequest):
         logger.exception("draft_text failed")
         raise HTTPException(502, f"Text generation failed: {exc}") from exc
 
-    # Image generation is best-effort; failure returns empty string.
-    page_image = await draft_image(page_text, memory.theme_and_style)
+    # Detect new characters for visual consistency across pages.
+    try:
+        new_chars = await extract_new_characters(
+            page_text, memory.characters, memory.theme_and_style
+        )
+    except Exception:
+        logger.exception("Character extraction failed")
+        new_chars = []
+
+    all_characters = list(memory.characters) + new_chars
+
+    # Image generation uses character descriptions for consistency.
+    page_image = await draft_image(page_text, memory.theme_and_style, all_characters)
+
+    # Generate portraits for newly introduced characters.
+    for char in new_chars:
+        try:
+            char.portrait = await generate_character_portrait(
+                char, memory.theme_and_style
+            )
+        except Exception:
+            logger.exception("Portrait generation failed for %s", char.name)
+
+    if new_chars:
+        memory.characters = all_characters
 
     # Record the new page.
     memory.pages.append(PageEntry(text=page_text, image_url=page_image))

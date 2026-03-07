@@ -28,6 +28,14 @@ class CurrentState(BaseModel):
     inventory: list[str] = Field(default_factory=list)
 
 
+class Character(BaseModel):
+    """A tracked character with a consistent visual identity."""
+
+    name: str
+    visual_description: str = ""
+    portrait: str = ""  # base64 data-URI
+
+
 class StoryMemory(BaseModel):
     """
     The Agent Memory File — one per story session.
@@ -42,6 +50,7 @@ class StoryMemory(BaseModel):
     current_state: CurrentState = Field(default_factory=CurrentState)
     running_summary: str = ""
     pages: list[PageEntry] = Field(default_factory=list)
+    characters: list[Character] = Field(default_factory=list)
     completed: bool = False
     title: str = ""
     cover_image: str = ""

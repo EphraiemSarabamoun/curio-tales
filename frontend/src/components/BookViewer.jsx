@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { generatePage } from '../api';
 import './BookViewer.css';
 
@@ -7,6 +7,7 @@ function BookViewer({ story, onBack, onStoryComplete }) {
   const [storyId] = useState(story?.story_id || '');
   const [currentPage, setCurrentPage] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
+  const [flipDirection, setFlipDirection] = useState(null);
   const [continueText, setContinueText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [completed, setCompleted] = useState(story?.memory?.completed || false);
@@ -28,11 +29,15 @@ function BookViewer({ story, onBack, onStoryComplete }) {
     if (direction === 'next' && !hasNext) return;
     if (direction === 'prev' && !hasPrev) return;
 
+    setFlipDirection(direction);
     setIsFlipping(true);
     setTimeout(() => {
       setCurrentPage((p) => (direction === 'next' ? p + 1 : p - 1));
+    }, 300);
+    setTimeout(() => {
       setIsFlipping(false);
-    }, 500);
+      setFlipDirection(null);
+    }, 600);
   };
 
   const handleContinue = async () => {
@@ -63,8 +68,6 @@ function BookViewer({ story, onBack, onStoryComplete }) {
   const handleGoToLibrary = () => {
     if (onStoryComplete) onStoryComplete();
   };
-
-  const title = coverData.title || story.memory?.theme_and_style || 'Your Story';
 
   // --- Completion screen ---
   if (endingPhase === 'ended') {
@@ -99,7 +102,8 @@ function BookViewer({ story, onBack, onStoryComplete }) {
 
   const bookClass = [
     'open-book',
-    isFlipping && 'open-book--flipping',
+    flipDirection === 'next' && 'open-book--flip-next',
+    flipDirection === 'prev' && 'open-book--flip-prev',
     endingPhase === 'closing' && 'open-book--closing',
   ].filter(Boolean).join(' ');
 
@@ -107,55 +111,57 @@ function BookViewer({ story, onBack, onStoryComplete }) {
     <div className="book-viewer">
       <div className="viewer-bg-texture" />
 
-      <header className="viewer-header">
-        <button className="back-button" onClick={onBack}>
-          <span className="back-arrow">&larr;</span>
-          <span>Back</span>
-        </button>
-        <h1 className="viewer-title">{title}</h1>
-        <span className="page-indicator">
-          Page {currentPage + 1} of {pages.length}
-        </span>
-      </header>
+      <button className="viewer-back-float" onClick={onBack}>
+        &larr; Back
+      </button>
 
       <div className="book-container">
-        <div className={bookClass}>
-          {/* Left page - illustration */}
-          <div className="book-page book-page--left">
-            {page.image_url ? (
-              <img
-                className="page-generated-image"
-                src={page.image_url}
-                alt="Story illustration"
-              />
-            ) : (
-              <div
-                className="page-content-illust"
-                style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%)' }}
-              >
-                <div className="illustration-scene">
-                  <div className="illust-stars" />
+        <div className="book-scene">
+          <div className={bookClass}>
+            {/* Left page - illustration */}
+            <div className="book-page book-page--left">
+              {page.image_url ? (
+                <img
+                  className="page-generated-image"
+                  src={page.image_url}
+                  alt="Story illustration"
+                />
+              ) : (
+                <div
+                  className="page-content-illust"
+                  style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%)' }}
+                >
+                  <div className="illustration-scene">
+                    <div className="illust-stars" />
+                  </div>
                 </div>
-              </div>
-            )}
-            <div className="page-curl page-curl--left" />
-          </div>
-
-          {/* Book spine */}
-          <div className="book-spine-center" />
-
-          {/* Right page - text */}
-          <div className="book-page book-page--right">
-            <div className="page-content-text">
-              <div className="page-text-ornament">&#10022;</div>
-              <p className="story-text">{page.text}</p>
-              <div className="page-number">{currentPage + 1}</div>
+              )}
             </div>
-            <div className="page-curl page-curl--right" />
+
+            {/* Book spine */}
+            <div className="book-spine-center" />
+
+            {/* Right page - text */}
+            <div className="book-page book-page--right">
+              <div className="page-content-text">
+                <div className="page-text-ornament">&#10022;</div>
+                <p className="story-text">{page.text}</p>
+                <div className="page-number">{currentPage + 1}</div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="book-shadow-bottom" />
+
+        <div className="book-page-dots">
+          {pages.map((_, i) => (
+            <span
+              key={i}
+              className={`book-dot ${i === currentPage ? 'book-dot--active' : ''}`}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="viewer-controls">
@@ -164,7 +170,7 @@ function BookViewer({ story, onBack, onStoryComplete }) {
           onClick={() => flipPage('prev')}
           disabled={!hasPrev}
         >
-          &larr; Previous
+          &larr;
         </button>
 
         <button
@@ -172,7 +178,7 @@ function BookViewer({ story, onBack, onStoryComplete }) {
           onClick={() => flipPage('next')}
           disabled={!hasNext}
         >
-          Next &rarr;
+          &rarr;
         </button>
       </div>
 
