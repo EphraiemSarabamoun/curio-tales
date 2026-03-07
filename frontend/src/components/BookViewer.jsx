@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { generatePage } from '../api';
 import './BookViewer.css';
 
-const ILLUSTRATIONS = {
-  astronaut: {
+// CSS-only fallback illustrations for pages without an AI-generated image.
+const FALLBACK_ILLUSTRATIONS = {
+  default: {
     bg: 'linear-gradient(135deg, #0a0e27 0%, #1a1a4e 40%, #2d1b69 100%)',
     elements: (
       <>
@@ -18,46 +20,22 @@ const ILLUSTRATIONS = {
       </>
     ),
   },
-  spaceship: {
-    bg: 'linear-gradient(135deg, #0d1117 0%, #161b33 40%, #1a2744 100%)',
-    elements: (
-      <>
-        <div className="illust-stars" />
-        <div className="illust-ship">
-          <div className="ship-body" />
-          <div className="ship-wing ship-wing--left" />
-          <div className="ship-wing ship-wing--right" />
-          <div className="ship-flame" />
-        </div>
-        <div className="illust-nebula" />
-      </>
-    ),
-  },
-  saturn: {
-    bg: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 40%, #2a1a3e 100%)',
-    elements: (
-      <>
-        <div className="illust-stars" />
-        <div className="illust-saturn">
-          <div className="saturn-body" />
-          <div className="saturn-ring" />
-        </div>
-        <div className="illust-portal" />
-      </>
-    ),
-  },
 };
 
 function BookViewer({ story, onBack }) {
+  const [pages, setPages] = useState(story?.pages || []);
+  const [storyId, setStoryId] = useState(story?.storyId || null);
   const [currentPage, setCurrentPage] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
+  const [continueInput, setContinueInput] = useState('');
+  const [loading, setLoading] = useState(false);
 
   if (!story) return null;
 
-  const page = story.pages[currentPage];
-  const illust = ILLUSTRATIONS[page.illustration] || ILLUSTRATIONS.astronaut;
-  const hasNext = currentPage < story.pages.length - 1;
+  const page = pages[currentPage];
+  const hasNext = currentPage < pages.length - 1;
   const hasPrev = currentPage > 0;
+  const isLastPage = currentPage === pages.length - 1;
 
   const flipPage = (direction) => {
     if (isFlipping) return;
@@ -71,6 +49,37 @@ function BookViewer({ story, onBack }) {
     }, 500);
   };
 
+  const handleContinue = async () => {
+    if (!continueInput.trim() || loading) return;
+    setLoading(true);
+    try {
+      const result = await generatePage({
+        story_id: storyId,
+        user_action: continueInput,
+      });
+      setStoryId(result.story_id);
+      setPages(result.memory.pages.map((p) => ({
+        text: p.text,
+        image_url: p.image_url,
+      })));
+      setContinueInput('');
+      // Flip to the new page.
+      setIsFlipping(true);
+      setTimeout(() => {
+        setCurrentPage(result.memory.pages.length - 1);
+        setIsFlipping(false);
+      }, 500);
+    } catch (err) {
+      console.error('Continue failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Determine left-page content: AI image or CSS fallback.
+  const hasImage = page?.image_url && page.image_url.startsWith('data:');
+  const fallback = FALLBACK_ILLUSTRATIONS.default;
+
   return (
     <div className="book-viewer">
       <div className="viewer-bg-texture" />
@@ -82,7 +91,7 @@ function BookViewer({ story, onBack }) {
         </button>
         <h1 className="viewer-title">{story.title}</h1>
         <span className="page-indicator">
-          Page {currentPage + 1} of {story.pages.length}
+          Page {currentPage + 1} of {pages.length}
         </span>
       </header>
 
@@ -90,9 +99,19 @@ function BookViewer({ story, onBack }) {
         <div className={`open-book ${isFlipping ? 'open-book--flipping' : ''}`}>
           {/* Left page - illustration */}
           <div className="book-page book-page--left">
-            <div className="page-content-illust" style={{ background: illust.bg }}>
-              <div className="illustration-scene">{illust.elements}</div>
-            </div>
+            {hasImage ? (
+              <div className="page-content-illust">
+                <img
+                  className="page-generated-image"
+                  src={page.image_url}
+                  alt="Story illustration"
+                />
+              </div>
+            ) : (
+              <div className="page-content-illust" style={{ background: fallback.bg }}>
+                <div className="illustration-scene">{fallback.elements}</div>
+              </div>
+            )}
             <div className="page-curl page-curl--left" />
           </div>
 
@@ -103,7 +122,7 @@ function BookViewer({ story, onBack }) {
           <div className="book-page book-page--right">
             <div className="page-content-text">
               <div className="page-text-ornament">&#10022;</div>
-              <p className="story-text">{page.text}</p>
+              <p className="story-text">{page?.text}</p>
               <div className="page-number">{currentPage + 1}</div>
             </div>
             <div className="page-curl page-curl--right" />
@@ -112,6 +131,28 @@ function BookViewer({ story, onBack }) {
 
         <div className="book-shadow-bottom" />
       </div>
+
+      {/* Continue input — shown on the last page */}
+      {isLastPage && storyId && (
+        <div className="continue-section">
+          <input
+            className="continue-input"
+            type="text"
+            placeholder="What happens next? (e.g. I open the mysterious door...)"
+            value={continueInput}
+            onChange={(e) => setContinueInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleContinue()}
+            disabled={loading}
+          />
+          <button
+            className="continue-button"
+            onClick={handleContinue}
+            disabled={loading || !continueInput.trim()}
+          >
+            {loading ? 'Generating...' : 'Continue Story'}
+          </button>
+        </div>
+      )}
 
       <div className="viewer-controls">
         <button

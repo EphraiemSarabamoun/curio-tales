@@ -301,6 +301,17 @@
   font-size: 1.2rem;
 }
 
+.generate-error {
+  color: var(--accent-coral);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.generate-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .inputs-header {
