@@ -82,12 +82,12 @@ Inventory: {", ".join(memory.current_state.inventory) or "nothing"}
 {user_action}
 
 INSTRUCTIONS:
-- Write exactly ONE page of narrative continuing the story (150-200 words).
+- Write exactly 2-3 short sentences for one storybook page (this is a children's book).
+- Use simple, vivid language a child can follow.
 - Incorporate the reader's action naturally.
 - End on a moment that invites the next choice — a cliffhanger, a discovery, or a question.
-- Use vivid, sensory language appropriate for the theme.
 - Do NOT include page numbers, titles, or meta-commentary.
-- Output ONLY the narrative paragraph(s)."""
+- Output ONLY the 2-3 sentences, nothing else."""
 
     client = _get_client()
 
@@ -125,9 +125,10 @@ async def draft_image(page_text: str, theme_and_style: str) -> str:
     try:
         # --- Step 1: extract a visual prompt from the narrative -----------
 
-        extraction_prompt = f"""Read the following storybook page and output a SHORT,
+        extraction_prompt = f"""Read the following children's storybook page and output a SHORT,
 comma-separated visual description suitable as an image-generation prompt.
-Focus on: subject, action, setting, lighting, colour palette.
+Focus on: main character, action, setting, mood.
+The image must be a full-page children's book illustration in portrait orientation (3:4 aspect ratio).
 Do NOT include any explanation — output ONLY the comma-separated phrases.
 
 PAGE TEXT:
@@ -140,8 +141,8 @@ PAGE TEXT:
         )
 
         visual_prompt = extraction_resp.text.strip()
-        # Append the theme to lock in a consistent art direction.
-        full_prompt = f"{visual_prompt}, {theme_and_style}"
+        # Append the theme + children's book style to lock in visual consistency.
+        full_prompt = f"{visual_prompt}, {theme_and_style}, children's storybook illustration, soft colors, whimsical, portrait 3:4 aspect ratio"
         logger.info("Image prompt: %s", full_prompt)
 
         # --- Step 2: generate the image via Gemini image generation -------
