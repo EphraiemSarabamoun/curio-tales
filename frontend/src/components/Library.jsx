@@ -1,42 +1,71 @@
-import { useState, useEffect } from 'react';
-import { listStories, getStory } from '../api';
+import { useState } from 'react';
 import './Library.css';
 
-// Color palette for dynamically-assigned book covers.
-const PALETTE = [
-  { color: '#1a3a5c', accent: '#4a9eff' },
-  { color: '#2d1b4e', accent: '#b088f9' },
-  { color: '#4a3728', accent: '#f0a500' },
-  { color: '#1b3a3a', accent: '#5ce0d2' },
-  { color: '#3a1b2e', accent: '#ff6b9d' },
-  { color: '#2e3a1b', accent: '#a8d65c' },
+const BOOKS = [
+  {
+    id: 1,
+    title: 'Project Hail Mary',
+    author: 'Andy Weir',
+    color: '#1a3a5c',
+    accent: '#4a9eff',
+  },
+  {
+    id: 2,
+    title: 'The Midnight Library',
+    author: 'Matt Haig',
+    color: '#2d1b4e',
+    accent: '#b088f9',
+  },
+  {
+    id: 3,
+    title: 'Klara and the Sun',
+    author: 'Kazuo Ishiguro',
+    color: '#4a3728',
+    accent: '#f0a500',
+  },
+  {
+    id: 4,
+    title: 'Piranesi',
+    author: 'Susanna Clarke',
+    color: '#1b3a3a',
+    accent: '#5ce0d2',
+  },
+  {
+    id: 5,
+    title: 'The Invisible Life of Addie LaRue',
+    author: 'V.E. Schwab',
+    color: '#3a1b2e',
+    accent: '#ff6b9d',
+  },
+  {
+    id: 6,
+    title: 'Anxious People',
+    author: 'Fredrik Backman',
+    color: '#2e3a1b',
+    accent: '#a8d65c',
+  },
 ];
 
+const sampleStory = {
+  title: 'Captain Leo\'s Space Adventure',
+  illustration: 'astronaut',
+  pages: [
+    {
+      text: 'Our hero, Captain Leo, floated through the endless void of space. Stars twinkled like diamonds scattered across black velvet, and the great blue marble of Earth shrank behind him.',
+      illustration: 'astronaut',
+    },
+    {
+      text: 'His ship, The Curious Fox, hummed gently as it carried him toward the mysterious signal coming from the rings of Saturn. "What could be out there?" Leo wondered aloud.',
+      illustration: 'spaceship',
+    },
+    {
+      text: '"Mission Control, I\'m approaching the source," Leo radioed back. The signal grew stronger, pulsing like a heartbeat. Then, through the golden rings, he saw it -- a doorway made of light.',
+      illustration: 'saturn',
+    },
+  ],
+};
+
 function Library({ onAddNew, onSelectBook }) {
-  const [stories, setStories] = useState([]);
-
-  useEffect(() => {
-    listStories()
-      .then(setStories)
-      .catch(() => setStories([]));
-  }, []);
-
-  const handleSelect = async (s, idx) => {
-    try {
-      const memory = await getStory(s.story_id);
-      onSelectBook({
-        title: s.title,
-        storyId: s.story_id,
-        pages: memory.pages.map((p) => ({
-          text: p.text,
-          image_url: p.image_url,
-        })),
-      });
-    } catch {
-      // If fetch fails, just ignore.
-    }
-  };
-
   return (
     <div className="library">
       <header className="library-header">
@@ -57,36 +86,33 @@ function Library({ onAddNew, onSelectBook }) {
           <span className="add-new-label">ADD NEW STORY</span>
         </button>
 
-        {stories.map((s, idx) => {
-          const pal = PALETTE[idx % PALETTE.length];
-          return (
-            <button
-              key={s.story_id}
-              className="book-card"
-              style={{ '--book-color': pal.color, '--book-accent': pal.accent }}
-              onClick={() => handleSelect(s, idx)}
-            >
-              <div className="book-cover">
-                <div className="book-spine" />
-                <div className="book-cover-art">
-                  <div className="cover-decoration">
-                    <div className="cover-circle" />
-                    <div className="cover-lines">
-                      <div className="cover-line" />
-                      <div className="cover-line" />
-                      <div className="cover-line" />
-                    </div>
+        {BOOKS.map((book) => (
+          <button
+            key={book.id}
+            className="book-card"
+            style={{ '--book-color': book.color, '--book-accent': book.accent }}
+            onClick={() => onSelectBook(sampleStory)}
+          >
+            <div className="book-cover">
+              <div className="book-spine" />
+              <div className="book-cover-art">
+                <div className="cover-decoration">
+                  <div className="cover-circle" />
+                  <div className="cover-lines">
+                    <div className="cover-line" />
+                    <div className="cover-line" />
+                    <div className="cover-line" />
                   </div>
                 </div>
-                <div className="book-info">
-                  <h3 className="book-title">{s.title}</h3>
-                  <p className="book-author">{s.page_count} pages</p>
-                </div>
               </div>
-              <div className="book-shadow" />
-            </button>
-          );
-        })}
+              <div className="book-info">
+                <h3 className="book-title">{book.title}</h3>
+                <p className="book-author">{book.author}</p>
+              </div>
+            </div>
+            <div className="book-shadow" />
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { generatePage } from '../api';
 import './StoryInputs.css';
 
 const PROMPTS = [
@@ -47,8 +46,6 @@ function WaveformVisualizer({ isActive }) {
 function StoryInputs({ onBack, onGenerate }) {
   const [inputs, setInputs] = useState({ who: '', where: '', how: '' });
   const [activeRecording, setActiveRecording] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   const handleInputChange = (id, value) => {
     setInputs((prev) => ({ ...prev, [id]: value }));
@@ -58,29 +55,25 @@ function StoryInputs({ onBack, onGenerate }) {
     setActiveRecording((prev) => (prev === id ? null : id));
   };
 
-  const handleGenerate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await generatePage({
-        who: inputs.who,
-        where: inputs.where,
-        how: inputs.how,
-      });
-      // Build the story shape the BookViewer expects.
-      onGenerate({
-        title: 'My Story',
-        storyId: result.story_id,
-        pages: result.memory.pages.map((p) => ({
-          text: p.text,
-          image_url: p.image_url,
-        })),
-      });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleGenerate = () => {
+    onGenerate({
+      title: 'Captain Leo\'s Space Adventure',
+      illustration: 'astronaut',
+      pages: [
+        {
+          text: 'Our hero, Captain Leo, floated through the endless void of space. Stars twinkled like diamonds scattered across black velvet, and the great blue marble of Earth shrank behind him.',
+          illustration: 'astronaut',
+        },
+        {
+          text: 'His ship, The Curious Fox, hummed gently as it carried him toward the mysterious signal coming from the rings of Saturn. "What could be out there?" Leo wondered aloud.',
+          illustration: 'spaceship',
+        },
+        {
+          text: '"Mission Control, I\'m approaching the source," Leo radioed back. The signal grew stronger, pulsing like a heartbeat. Then, through the golden rings, he saw it -- a doorway made of light.',
+          illustration: 'saturn',
+        },
+      ],
+    });
   };
 
   const allFilled = inputs.who && inputs.where && inputs.how;
@@ -134,14 +127,12 @@ function StoryInputs({ onBack, onGenerate }) {
       </div>
 
       <div className="generate-section">
-        {error && <p className="generate-error">{error}</p>}
         <button
-          className={`generate-button ${allFilled && !loading ? 'generate-button--ready' : ''}`}
+          className={`generate-button ${allFilled ? 'generate-button--ready' : ''}`}
           onClick={handleGenerate}
-          disabled={loading}
         >
           <span className="generate-icon">&#10024;</span>
-          <span>{loading ? 'Generating...' : 'Generate My Story'}</span>
+          <span>Generate My Story</span>
         </button>
       </div>
     </div>
