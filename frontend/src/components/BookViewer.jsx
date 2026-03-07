@@ -1,63 +1,21 @@
 import { useState } from 'react';
+import { generatePage } from '../api';
 import './BookViewer.css';
 
-const ILLUSTRATIONS = {
-  astronaut: {
-    bg: 'linear-gradient(135deg, #0a0e27 0%, #1a1a4e 40%, #2d1b69 100%)',
-    elements: (
-      <>
-        <div className="illust-stars" />
-        <div className="illust-planet" />
-        <div className="illust-astronaut">
-          <div className="astronaut-helmet" />
-          <div className="astronaut-body" />
-          <div className="astronaut-pack" />
-          <div className="astronaut-visor" />
-        </div>
-        <div className="illust-earth" />
-      </>
-    ),
-  },
-  spaceship: {
-    bg: 'linear-gradient(135deg, #0d1117 0%, #161b33 40%, #1a2744 100%)',
-    elements: (
-      <>
-        <div className="illust-stars" />
-        <div className="illust-ship">
-          <div className="ship-body" />
-          <div className="ship-wing ship-wing--left" />
-          <div className="ship-wing ship-wing--right" />
-          <div className="ship-flame" />
-        </div>
-        <div className="illust-nebula" />
-      </>
-    ),
-  },
-  saturn: {
-    bg: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 40%, #2a1a3e 100%)',
-    elements: (
-      <>
-        <div className="illust-stars" />
-        <div className="illust-saturn">
-          <div className="saturn-body" />
-          <div className="saturn-ring" />
-        </div>
-        <div className="illust-portal" />
-      </>
-    ),
-  },
-};
-
 function BookViewer({ story, onBack }) {
+  const [pages, setPages] = useState(story?.memory?.pages || []);
+  const [storyId] = useState(story?.story_id || '');
   const [currentPage, setCurrentPage] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
+  const [continueText, setContinueText] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   if (!story) return null;
 
-  const page = story.pages[currentPage];
-  const illust = ILLUSTRATIONS[page.illustration] || ILLUSTRATIONS.astronaut;
-  const hasNext = currentPage < story.pages.length - 1;
+  const page = pages[currentPage];
+  const hasNext = currentPage < pages.length - 1;
   const hasPrev = currentPage > 0;
+  const isLastPage = currentPage === pages.length - 1;
 
   const flipPage = (direction) => {
     if (isFlipping) return;
@@ -71,6 +29,23 @@ function BookViewer({ story, onBack }) {
     }, 500);
   };
 
+  const handleContinue = async () => {
+    if (!continueText.trim() || isGenerating) return;
+    setIsGenerating(true);
+    try {
+      const res = await generatePage({ story_id: storyId, user_action: continueText });
+      setPages(res.memory.pages);
+      setContinueText('');
+      setCurrentPage(res.memory.pages.length - 1);
+    } catch (err) {
+      console.error('Continue failed:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const title = story.memory?.theme_and_style || 'Your Story';
+
   return (
     <div className="book-viewer">
       <div className="viewer-bg-texture" />
@@ -78,11 +53,11 @@ function BookViewer({ story, onBack }) {
       <header className="viewer-header">
         <button className="back-button" onClick={onBack}>
           <span className="back-arrow">&larr;</span>
-          <span>Back to Library</span>
+          <span>Back</span>
         </button>
-        <h1 className="viewer-title">{story.title}</h1>
+        <h1 className="viewer-title">{title}</h1>
         <span className="page-indicator">
-          Page {currentPage + 1} of {story.pages.length}
+          Page {currentPage + 1} of {pages.length}
         </span>
       </header>
 
@@ -90,9 +65,22 @@ function BookViewer({ story, onBack }) {
         <div className={`open-book ${isFlipping ? 'open-book--flipping' : ''}`}>
           {/* Left page - illustration */}
           <div className="book-page book-page--left">
-            <div className="page-content-illust" style={{ background: illust.bg }}>
-              <div className="illustration-scene">{illust.elements}</div>
-            </div>
+            {page.image_url ? (
+              <img
+                className="page-generated-image"
+                src={page.image_url}
+                alt="Story illustration"
+              />
+            ) : (
+              <div
+                className="page-content-illust"
+                style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%)' }}
+              >
+                <div className="illustration-scene">
+                  <div className="illust-stars" />
+                </div>
+              </div>
+            )}
             <div className="page-curl page-curl--left" />
           </div>
 
@@ -122,21 +110,35 @@ function BookViewer({ story, onBack }) {
           &larr; Previous
         </button>
 
-        <div className="audio-controls">
-          <button className="audio-play-btn">
-            <div className="play-icon" />
-          </button>
-          <span className="audio-label">Listen to Story</span>
-        </div>
-
         <button
           className={`page-button page-button--primary ${!hasNext ? 'page-button--disabled' : ''}`}
           onClick={() => flipPage('next')}
           disabled={!hasNext}
         >
-          Leaf Over &rarr;
+          Next &rarr;
         </button>
       </div>
+
+      {isLastPage && (
+        <div className="continue-section">
+          <input
+            className="continue-input"
+            type="text"
+            placeholder="What happens next?"
+            value={continueText}
+            onChange={(e) => setContinueText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleContinue()}
+            disabled={isGenerating}
+          />
+          <button
+            className="continue-button"
+            onClick={handleContinue}
+            disabled={!continueText.trim() || isGenerating}
+          >
+            {isGenerating ? 'Generating...' : 'Continue Story'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

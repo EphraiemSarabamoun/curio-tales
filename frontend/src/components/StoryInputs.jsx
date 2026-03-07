@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { generatePage } from '../api';
 import './StoryInputs.css';
 
 const STEPS = [
@@ -66,6 +67,8 @@ function StoryInputs({ onBack, onGenerate }) {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [answers, setAnswers] = useState({ who: '', where: '', how: '' });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState('');
   const inputRef = useRef(null);
 
   const current = STEPS[step];
@@ -75,29 +78,24 @@ function StoryInputs({ onBack, onGenerate }) {
     return () => clearTimeout(t);
   }, [step]);
 
-  const goNext = () => {
+  const goNext = async () => {
     if (step < STEPS.length - 1) {
       setDirection(1);
       setStep((s) => s + 1);
     } else {
-      onGenerate({
-        title: "Captain Leo's Space Adventure",
-        illustration: 'astronaut',
-        pages: [
-          {
-            text: 'Our hero, Captain Leo, floated through the endless void of space. Stars twinkled like diamonds scattered across black velvet, and the great blue marble of Earth shrank behind him.',
-            illustration: 'astronaut',
-          },
-          {
-            text: 'His ship, The Curious Fox, hummed gently as it carried him toward the mysterious signal coming from the rings of Saturn. "What could be out there?" Leo wondered aloud.',
-            illustration: 'spaceship',
-          },
-          {
-            text: '"Mission Control, I\'m approaching the source," Leo radioed back. The signal grew stronger, pulsing like a heartbeat. Then, through the golden rings, he saw it — a doorway made of light.',
-            illustration: 'saturn',
-          },
-        ],
-      });
+      setIsGenerating(true);
+      setError('');
+      try {
+        const res = await generatePage({
+          who: answers.who,
+          where: answers.where,
+          how: answers.how,
+        });
+        onGenerate(res);
+      } catch (err) {
+        setError(err.message);
+        setIsGenerating(false);
+      }
     }
   };
 
@@ -110,7 +108,7 @@ function StoryInputs({ onBack, onGenerate }) {
     }
   };
 
-  const canAdvance = answers[current.id].trim().length > 0;
+  const canAdvance = answers[current.id].trim().length > 0 && !isGenerating;
   const isLast = step === STEPS.length - 1;
 
   return (
@@ -178,8 +176,10 @@ function StoryInputs({ onBack, onGenerate }) {
               whileTap={canAdvance ? { scale: 0.96 } : {}}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             >
-              {isLast ? 'Create My Story ✨' : 'Next →'}
+              {isLast ? (isGenerating ? 'Creating your story...' : 'Create My Story ✨') : 'Next →'}
             </motion.button>
+
+            {error && <p className="si-error">{error}</p>}
           </motion.div>
         </AnimatePresence>
       </div>
