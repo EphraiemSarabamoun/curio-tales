@@ -17,7 +17,7 @@ import re
 from google import genai
 from google.genai import types
 
-from models import CurrentState, PageEntry, StoryMemory
+from models import Character, CurrentState, PageEntry, StoryMemory
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ INSTRUCTIONS:
 # 2. DRAFT IMAGE
 # ===================================================================
 
-async def draft_image(page_text: str, theme_and_style: str) -> str:
+async def draft_image(page_text: str, theme_and_style: str, characters: list[Character] | None = None) -> str:
     """
     Produce an illustration for *page_text*.
 
@@ -130,9 +130,19 @@ async def draft_image(page_text: str, theme_and_style: str) -> str:
     try:
         # --- Step 1: extract a visual prompt from the narrative -----------
 
+        char_section = ""
+        if characters:
+            char_lines = "\n".join(
+                f"- {c.name}: {c.visual_description}" for c in characters
+            )
+            char_section = (
+                "\n\nCHARACTER VISUAL REFERENCES — use these exact descriptions "
+                "when depicting these characters:\n" + char_lines
+            )
+
         extraction_prompt = f"""Read the following children's storybook page and output a SHORT,
 comma-separated visual description suitable as an image-generation prompt.
-Focus on: main character, action, setting, mood.
+Focus on: main character, action, setting, mood.{char_section}
 The image must be a full-page children's book illustration in portrait orientation (3:4 aspect ratio).
 Do NOT include any explanation — output ONLY the comma-separated phrases.
 
@@ -357,6 +367,119 @@ THEME: {memory.theme_and_style}"""
         logger.error("Cover image generation failed: %s", exc)
 
     return title, ""
+
+
+# ===================================================================
+# 6. EXTRACT NEW CHARACTERS
+# ===================================================================
+
+async def extract_new_characters(
+    page_text: str,
+    existing_characters: list[Character],
+    theme_and_style: str,
+) -> list[Character]:
+    """
+    Identify characters in page_text not already tracked.
+    Returns new Character objects with visual descriptions (no portraits).
+    """
+
+    client = _get_client()
+
+    known = (
+        ", ".join(c.name for c in existing_characters)
+        if existing_characters
+        else "none"
+    )
+
+    prompt = f"""Identify NEW characters (people, animals, creatures) visually present
+in this storybook page that are NOT in the known list.
+
+KNOWN CHARACTERS: {known}
+THEME: {theme_and_style}
+
+PAGE TEXT:
+{page_text}
+
+For each new character output a JSON array:
+[{{"name": "...", "visual_description": "..."}}]
+
+visual_description must be detailed, comma-separated physical traits for image generation:
+species/gender, approximate age, hair color & style, eye color, skin tone, clothing,
+distinguishing features. Be specific so the character looks identical across illustrations.
+
+If no new characters, output: []
+Respond with ONLY valid JSON, no markdown fences."""
+
+    response = await asyncio.to_thread(
+        client.models.generate_content,
+        model=LIGHT_MODEL,
+        contents=prompt,
+    )
+
+    raw = response.text.strip()
+    raw = re.sub(r"^```(?:json)?\s*", "", raw)
+    raw = re.sub(r"\s*```$", "", raw)
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        logger.error("Character extraction parse failed: %s", raw)
+        return []
+
+    if not isinstance(data, list):
+        return []
+
+    new_chars = [
+        Character(name=item["name"], visual_description=item.get("visual_description", ""))
+        for item in data
+        if isinstance(item, dict) and "name" in item
+    ]
+
+    if new_chars:
+        logger.info("New characters: %s", [c.name for c in new_chars])
+    return new_chars
+
+
+# ===================================================================
+# 7. GENERATE CHARACTER PORTRAIT
+# ===================================================================
+
+async def generate_character_portrait(
+    character: Character,
+    theme_and_style: str,
+) -> str:
+    """Generate a portrait for a character. Returns base64 data-URI or empty string."""
+
+    client = _get_client()
+
+    prompt = (
+        f"Character portrait of {character.visual_description}, "
+        f"{theme_and_style}, "
+        "children's book character portrait, bust shot, centered, "
+        "simple soft background, portrait 3:4 aspect ratio"
+    )
+
+    try:
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model=IMAGE_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=["Text", "Image"],
+            ),
+        )
+
+        for part in response.candidates[0].content.parts:
+            if part.inline_data is not None:
+                b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
+                mime = part.inline_data.mime_type or "image/png"
+                logger.info("Portrait generated for %s", character.name)
+                return f"data:{mime};base64,{b64}"
+
+    except Exception as exc:
+        logger.error("Portrait generation failed for %s: %s", character.name, exc)
+
+    return ""
 
 
 # ===================================================================
