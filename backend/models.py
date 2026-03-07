@@ -38,9 +38,13 @@ class StoryMemory(BaseModel):
 
     story_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
     theme_and_style: str = ""
+    quest: str = ""
     current_state: CurrentState = Field(default_factory=CurrentState)
     running_summary: str = ""
     pages: list[PageEntry] = Field(default_factory=list)
+    completed: bool = False
+    title: str = ""
+    cover_image: str = ""
 
 
 class GenerateRequest(BaseModel):
@@ -65,3 +69,4 @@ class GenerateResponse(BaseModel):
     page_image: str  # base64 data-URI
     page_number: int
     memory: StoryMemory
+    story_complete: bool = False

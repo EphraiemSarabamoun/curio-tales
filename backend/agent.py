@@ -64,10 +64,14 @@ async def draft_text(memory: StoryMemory, user_action: str) -> str:
 
     last_page_text = memory.pages[-1].text if memory.pages else "(story has not started)"
 
+    quest_section = ""
+    if memory.quest:
+        quest_section = f"\n=== QUEST ===\n{memory.quest}\n"
+
     prompt = f"""You are a master storyteller writing an interactive storybook.
 
 THEME / VISUAL STYLE: {memory.theme_and_style}
-
+{quest_section}
 === STORY SO FAR (compressed) ===
 {memory.running_summary or "No prior events."}
 
@@ -85,7 +89,8 @@ INSTRUCTIONS:
 - Write exactly 2-3 short sentences for one storybook page (this is a children's book).
 - Use simple, vivid language a child can follow.
 - Incorporate the reader's action naturally.
-- End on a moment that invites the next choice — a cliffhanger, a discovery, or a question.
+- If the reader's action naturally resolves the QUEST, write a warm, satisfying conclusion. Do NOT force more conflict.
+- Otherwise, end on a moment that invites the next choice — a cliffhanger, a discovery, or a question.
 - Do NOT include page numbers, titles, or meta-commentary.
 - Output ONLY the 2-3 sentences, nothing else."""
 
@@ -247,6 +252,111 @@ Respond with ONLY valid JSON, no markdown fences."""
 
     logger.info("Memory updated — location: %s", updated.current_state.location)
     return updated
+
+
+# ===================================================================
+# 4. CHECK QUEST COMPLETION
+# ===================================================================
+
+async def check_quest_complete(memory: StoryMemory) -> bool:
+    """
+    Ask the model whether the story's quest has been fulfilled.
+
+    Compares the running summary against the original quest.
+    Returns True if the quest is resolved.
+    """
+
+    if not memory.quest:
+        return False
+
+    client = _get_client()
+
+    latest_page = memory.pages[-1].text if memory.pages else ""
+
+    prompt = f"""You are evaluating whether a children's storybook quest has been completed.
+
+QUEST THE READER ASSIGNED: {memory.quest}
+
+STORY SUMMARY:
+{memory.running_summary}
+
+LATEST PAGE:
+{latest_page}
+
+Based on the story summary and the latest page, has the core goal of the quest been achieved or resolved?
+Answer with ONLY "yes" or "no"."""
+
+    response = await asyncio.to_thread(
+        client.models.generate_content,
+        model=LIGHT_MODEL,
+        contents=prompt,
+    )
+
+    answer = response.text.strip().lower()
+    complete = answer.startswith("yes")
+    logger.info("Quest complete check: %s (answer: %s)", complete, answer)
+    return complete
+
+
+# ===================================================================
+# 5. GENERATE COVER
+# ===================================================================
+
+async def generate_cover(memory: StoryMemory) -> tuple[str, str]:
+    """
+    Generate a title and cover illustration for a completed story.
+
+    Returns (title, cover_image_data_uri).
+    cover_image may be empty string on failure.
+    """
+
+    client = _get_client()
+
+    # --- title ---
+    title_prompt = f"""Given this children's storybook summary, create a short, catchy book title (3-6 words).
+Output ONLY the title, nothing else.
+
+STORY: {memory.running_summary}
+THEME: {memory.theme_and_style}"""
+
+    title_resp = await asyncio.to_thread(
+        client.models.generate_content,
+        model=LIGHT_MODEL,
+        contents=title_prompt,
+    )
+    title = title_resp.text.strip().strip('"\'')
+    logger.info("Generated title: %s", title)
+
+    # --- cover image ---
+    cover_prompt = (
+        f"Children's book cover illustration for \"{title}\", "
+        f"{memory.theme_and_style}, "
+        "book cover design, centered composition, magical, inviting, "
+        "portrait 3:4 aspect ratio"
+    )
+
+    try:
+        cover_resp = await asyncio.to_thread(
+            client.models.generate_content,
+            model=IMAGE_MODEL,
+            contents=cover_prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=["Text", "Image"],
+            ),
+        )
+
+        for part in cover_resp.candidates[0].content.parts:
+            if part.inline_data is not None:
+                b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
+                mime = part.inline_data.mime_type or "image/png"
+                cover_image = f"data:{mime};base64,{b64}"
+                logger.info("Cover image generated (%s)", mime)
+                return title, cover_image
+
+    except Exception as exc:
+        logger.error("Cover image generation failed: %s", exc)
+
+    return title, ""
 
 
 # ===================================================================

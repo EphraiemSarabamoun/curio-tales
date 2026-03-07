@@ -71,7 +71,7 @@ function BookLogo() {
   );
 }
 
-function Welcome({ onStart }) {
+function Welcome({ onStart, onLibrary }) {
   const [engineReady, setEngineReady] = useState(false);
 
   useEffect(() => {
@@ -124,6 +124,18 @@ function Welcome({ onStart }) {
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
           >
             Start Your Adventure
+          </motion.button>
+        </motion.div>
+
+        <motion.div variants={fadeUp}>
+          <motion.button
+            className="welcome-library"
+            onClick={onLibrary}
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+          >
+            My Library
           </motion.button>
         </motion.div>
       </motion.div>

@@ -17,7 +17,13 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from agent import draft_image, draft_text, summarize_and_save
+from agent import (
+    check_quest_complete,
+    draft_image,
+    draft_text,
+    generate_cover,
+    summarize_and_save,
+)
 from models import (
     CurrentState,
     GenerateRequest,
@@ -92,9 +98,14 @@ async def generate(req: GenerateRequest):
         theme = req.theme_and_style or _build_theme(req.who, req.where, req.how)
         memory = StoryMemory(
             theme_and_style=theme,
+            quest=req.how,
             current_state=CurrentState(location=req.where or "unknown"),
         )
         sessions[memory.story_id] = memory
+
+    # --- guard: don't continue a completed story ----------------------------
+    if memory.completed:
+        raise HTTPException(400, "This story is already complete")
 
     # --- user action -------------------------------------------------------
     user_action = req.user_action
@@ -125,6 +136,24 @@ async def generate(req: GenerateRequest):
         logger.exception("summarize_and_save failed")
         # Non-fatal — the page is already appended.
 
+    # --- check quest completion (skip first page) ----------------------------
+    story_complete = False
+    if len(memory.pages) > 1:
+        try:
+            story_complete = await check_quest_complete(memory)
+        except Exception:
+            logger.exception("Quest completion check failed")
+
+    if story_complete:
+        try:
+            title, cover_image = await generate_cover(memory)
+            memory = memory.model_copy(
+                update={"completed": True, "title": title, "cover_image": cover_image}
+            )
+        except Exception:
+            logger.exception("Cover generation failed")
+            memory = memory.model_copy(update={"completed": True, "title": "Untitled"})
+
     sessions[memory.story_id] = memory
 
     return GenerateResponse(
@@ -133,6 +162,7 @@ async def generate(req: GenerateRequest):
         page_image=page_image,
         page_number=len(memory.pages),
         memory=memory,
+        story_complete=story_complete,
     )
 
 
@@ -148,7 +178,9 @@ async def list_stories():
             "story_id": m.story_id,
             "theme_and_style": m.theme_and_style,
             "page_count": len(m.pages),
-            "title": m.pages[0].text[:60] + "…" if m.pages else "Untitled",
+            "title": m.title or (m.pages[0].text[:60] + "…" if m.pages else "Untitled"),
+            "completed": m.completed,
+            "cover_image": m.cover_image,
         }
         for m in sessions.values()
     ]

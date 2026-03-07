@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { generatePage } from '../api';
 import './BookViewer.css';
 
-function BookViewer({ story, onBack }) {
+function BookViewer({ story, onBack, onStoryComplete }) {
   const [pages, setPages] = useState(story?.memory?.pages || []);
   const [storyId] = useState(story?.story_id || '');
   const [currentPage, setCurrentPage] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [continueText, setContinueText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [completed, setCompleted] = useState(story?.memory?.completed || false);
+  const [endingPhase, setEndingPhase] = useState(null); // null | 'closing' | 'ended'
+  const [coverData, setCoverData] = useState({
+    title: story?.memory?.title || '',
+    cover_image: story?.memory?.cover_image || '',
+  });
 
   if (!story) return null;
 
@@ -37,6 +43,16 @@ function BookViewer({ story, onBack }) {
       setPages(res.memory.pages);
       setContinueText('');
       setCurrentPage(res.memory.pages.length - 1);
+
+      if (res.story_complete) {
+        setCompleted(true);
+        setCoverData({
+          title: res.memory.title || '',
+          cover_image: res.memory.cover_image || '',
+        });
+        setTimeout(() => setEndingPhase('closing'), 2000);
+        setTimeout(() => setEndingPhase('ended'), 3500);
+      }
     } catch (err) {
       console.error('Continue failed:', err);
     } finally {
@@ -44,7 +60,48 @@ function BookViewer({ story, onBack }) {
     }
   };
 
-  const title = story.memory?.theme_and_style || 'Your Story';
+  const handleGoToLibrary = () => {
+    if (onStoryComplete) onStoryComplete();
+  };
+
+  const title = coverData.title || story.memory?.theme_and_style || 'Your Story';
+
+  // --- Completion screen ---
+  if (endingPhase === 'ended') {
+    return (
+      <div className="book-viewer">
+        <div className="viewer-bg-texture" />
+        <div className="completion-screen">
+          <div className="completion-cover">
+            {coverData.cover_image ? (
+              <img
+                className="cover-image"
+                src={coverData.cover_image}
+                alt="Story cover"
+              />
+            ) : (
+              <div className="cover-fallback">
+                <div className="illust-stars" />
+              </div>
+            )}
+            <div className="cover-title-overlay">
+              <h2 className="cover-title">{coverData.title || 'Your Story'}</h2>
+            </div>
+          </div>
+          <p className="completion-label">The End</p>
+          <button className="completion-button" onClick={handleGoToLibrary}>
+            Go to Library
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const bookClass = [
+    'open-book',
+    isFlipping && 'open-book--flipping',
+    endingPhase === 'closing' && 'open-book--closing',
+  ].filter(Boolean).join(' ');
 
   return (
     <div className="book-viewer">
@@ -62,7 +119,7 @@ function BookViewer({ story, onBack }) {
       </header>
 
       <div className="book-container">
-        <div className={`open-book ${isFlipping ? 'open-book--flipping' : ''}`}>
+        <div className={bookClass}>
           {/* Left page - illustration */}
           <div className="book-page book-page--left">
             {page.image_url ? (
@@ -119,7 +176,8 @@ function BookViewer({ story, onBack }) {
         </button>
       </div>
 
-      {isLastPage && (
+      {/* Continue story — only on last page of an active story */}
+      {isLastPage && !completed && (
         <div className="continue-section">
           <input
             className="continue-input"
@@ -136,6 +194,16 @@ function BookViewer({ story, onBack }) {
             disabled={!continueText.trim() || isGenerating}
           >
             {isGenerating ? 'Generating...' : 'Continue Story'}
+          </button>
+        </div>
+      )}
+
+      {/* Completed story — viewed from library */}
+      {isLastPage && completed && !endingPhase && (
+        <div className="story-ended-bar">
+          <span className="ended-label">The End</span>
+          <button className="completion-button" onClick={handleGoToLibrary}>
+            Go to Library
           </button>
         </div>
       )}

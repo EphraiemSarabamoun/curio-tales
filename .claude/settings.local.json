@@ -21,7 +21,11 @@
       "Bash(curl -s http://127.0.0.1:8000/api/stories | python -m json.tool)",
       "Bash(cp -a /Users/fatherdomadious/Desktop/curio-tales/curio-tales/. /Users/fatherdomadious/Desktop/curio-tales/frontend/)",
       "Bash(cd /Users/fatherdomadious/Desktop/curio-tales/frontend && npm run build 2>&1)",
-      "Bash(npm run lint 2>&1)"
+      "Bash(npm run lint 2>&1)",
+      "Bash(npm run build 2>&1)",
+      "Bash(cd /Users/fatherdomadious/Desktop/curio-tales/backend && python -c \"from models import StoryMemory, GenerateResponse; print\\('models OK'\\); from agent import check_quest_complete, generate_cover, draft_text, draft_image, summarize_and_save; print\\('agent OK'\\)\" 2>&1)",
+      "Bash(python -c \"from server import app; print\\('server OK'\\)\" 2>&1)",
+      "Bash(python -c \"from server import app; print\\('OK'\\)\" 2>&1)"
     ]
   }
 }
