@@ -156,7 +156,7 @@ PAGE TEXT:
         )
 
         visual_prompt = extraction_resp.text.strip()
-        # Append the theme + children's book style to lock in visual consistency.
+        # Append the theme + children's book style to lock in visual consistency..
         full_prompt = f"{visual_prompt}, {theme_and_style}, children's storybook illustration, soft colors, whimsical, portrait 3:4 aspect ratio"
         logger.info("Image prompt: %s", full_prompt)
 
