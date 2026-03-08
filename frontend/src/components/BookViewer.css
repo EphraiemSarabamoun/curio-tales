@@ -65,111 +65,10 @@
   display: flex;
   max-width: 960px;
   width: 100%;
-  min-height: 500px;
-  border-radius: 16px;
-  overflow: hidden;
-  transform-style: preserve-3d;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.4),
-    0 12px 40px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
-  transition: transform 0.15s ease;
-}
-
-/* Book pages */
-.book-page {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-}
-
-.book-page--left {
-  border-radius: 12px 0 0 12px;
-}
-
-.book-page--right {
-  border-radius: 0 12px 12px 0;
-  transform-origin: left center;
-  transition: transform 0.15s ease;
-}
-
-/* Left page - illustration */
-.page-content-illust {
-  width: 100%;
-  height: 100%;
-  min-height: 500px;
-  position: relative;
-  overflow: hidden;
-}
-
-.illustration-scene {
-  position: absolute;
-  inset: 0;
-}
-
-/* Starfield fallback */
-.illust-stars {
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(1px 1px at 10% 20%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
-    radial-gradient(1px 1px at 30% 60%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 50% 10%, rgba(255, 255, 255, 0.9) 0%, transparent 100%),
-    radial-gradient(1px 1px at 70% 40%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
-    radial-gradient(1px 1px at 85% 75%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 20% 80%, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
-    radial-gradient(1px 1px at 60% 85%, rgba(255, 255, 255, 0.6) 0%, transparent 100%),
-    radial-gradient(1px 1px at 90% 15%, rgba(255, 255, 255, 0.7) 0%, transparent 100%),
-    radial-gradient(1px 1px at 45% 45%, rgba(255, 255, 255, 0.5) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 15% 50%, rgba(255, 255, 255, 0.6) 0%, transparent 100%);
-  animation: stars-twinkle 4s ease-in-out infinite alternate;
-}
-
-@keyframes stars-twinkle {
-  0% { opacity: 0.6; }
-  100% { opacity: 1; }
-}
-
-/* Book spine */
-.book-spine-center {
-  width: 6px;
-  background: linear-gradient(
-    180deg,
-    rgba(167, 139, 250, 0.5),
-    rgba(255, 184, 0, 0.25),
-    rgba(167, 139, 250, 0.5)
-  );
-  box-shadow:
-    -2px 0 12px rgba(0, 0, 0, 0.5),
-    2px 0 12px rgba(0, 0, 0, 0.5);
-  flex-shrink: 0;
-  position: relative;
-}
-
-.book-spine-center::after {
-  content: '';
-  position: absolute;
-  top: 15%;
-  bottom: 15%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 2px;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    rgba(255, 184, 0, 0.3) 0px,
-    rgba(255, 184, 0, 0.3) 6px,
-    transparent 6px,
-    transparent 12px
-  );
-}
-
-/* Right page - text (dark elevated card) */
-.page-content-text {
-  width: 100%;
-  height: 100%;
-  min-height: 500px;
-  background: linear-gradient(145deg, #12122a 0%, #0e0e22 60%, #0a0a1a 100%);
-  padding: 2.5rem 2rem;
+  min-height: 650px;
+  background:
+    linear-gradient(135deg, #fdf8ee 0%, #f8f0dc 50%, #f2e8cc 100%);
+  padding: 3rem 2.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -217,6 +116,104 @@
   text-align: left;
   max-width: 100%;
   font-weight: 500;
+}
+
+/* In-page continue controls */
+.page-continue {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-mic-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(160, 120, 60, 0.3);
+  background: rgba(160, 120, 60, 0.08);
+  color: rgba(160, 120, 60, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.page-mic-btn:hover {
+  border-color: rgba(160, 120, 60, 0.5);
+  color: rgba(160, 120, 60, 0.85);
+  background: rgba(160, 120, 60, 0.15);
+}
+
+.page-mic-btn--listening {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+  background: rgba(240, 165, 0, 0.12);
+  animation: page-mic-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes page-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(240, 165, 0, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(240, 165, 0, 0); }
+}
+
+.page-mic-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.page-transcript {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-serif);
+  font-size: 0.85rem;
+}
+
+.page-transcript-final {
+  color: rgba(160, 120, 60, 0.8);
+}
+
+.page-transcript-interim {
+  color: var(--accent-gold);
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.page-transcript-hint {
+  color: rgba(160, 120, 60, 0.35);
+}
+
+.page-continue-btn {
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--accent-gold), #ffd966);
+  color: #0d0d0d;
+  border: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.page-continue-btn:hover:not(:disabled) {
+  box-shadow: 0 2px 10px rgba(240, 165, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.page-continue-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-voice-error {
+  width: 100%;
+  color: #ff6b6b;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
 }
 
 .page-number {
@@ -342,72 +339,11 @@
 .page-generated-image {
   width: 100%;
   height: 100%;
-  min-height: 500px;
+  min-height: 650px;
   object-fit: cover;
   object-position: center;
   display: block;
   background: #0a0a1a;
-}
-
-/* ===== CONTINUE SECTION ===== */
-.continue-section {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 0 2rem 1.5rem;
-  max-width: 720px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.continue-input {
-  flex: 1;
-  padding: 0.8rem 1.2rem;
-  border-radius: 50px;
-  border: 1.5px solid rgba(167, 139, 250, 0.2);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f0f0ff;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 500;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.continue-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.continue-input:focus {
-  outline: none;
-  border-color: rgba(167, 139, 250, 0.5);
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
-}
-
-.continue-button {
-  padding: 0.8rem 1.6rem;
-  border-radius: 50px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  font-family: 'Nunito', sans-serif;
-  background: linear-gradient(135deg, #FFB800, #e6a000);
-  color: #0a0a1a;
-  border: none;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s;
-}
-
-.continue-button:hover:not(:disabled) {
-  box-shadow: 0 4px 20px rgba(255, 184, 0, 0.35);
-  transform: translateY(-1px);
-}
-
-.continue-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* ===== BOOK CLOSING ANIMATION ===== */
@@ -538,11 +474,11 @@
 
   .page-content-illust,
   .page-generated-image {
-    min-height: 300px;
+    min-height: 416px;
   }
 
   .page-content-text {
-    min-height: 300px;
+    min-height: 416px;
     padding: 2rem 1.8rem;
   }
 
@@ -591,8 +527,4 @@
 
   .story-text { font-size: 0.95rem; }
 
-  .continue-section {
-    padding: 0 1rem 1.2rem;
-    flex-wrap: wrap;
-  }
 }

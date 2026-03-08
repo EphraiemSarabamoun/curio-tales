@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { generatePage } from '../api';
+import { useVoiceInput } from '../hooks/useVoiceInput';
+import { useTTS } from '../hooks/useTTS';
 import './BookViewer.css';
 
 function BookViewer({ story, onBack, onStoryComplete }) {
@@ -16,6 +18,23 @@ function BookViewer({ story, onBack, onStoryComplete }) {
     title: story?.memory?.title || '',
     cover_image: story?.memory?.cover_image || '',
   });
+  const voice = useVoiceInput();
+  const tts = useTTS();
+  const hasPlayedFirst = useRef(false);
+
+  useEffect(() => {
+    if (voice.transcript) {
+      setContinueText(voice.transcript);
+    }
+  }, [voice.transcript]);
+
+  // Auto-play TTS for the first page on mount
+  useEffect(() => {
+    if (!hasPlayedFirst.current && pages.length > 0 && pages[0].text) {
+      hasPlayedFirst.current = true;
+      tts.play(pages[0].text);
+    }
+  }, []);
 
   if (!story) return null;
 
@@ -47,7 +66,12 @@ function BookViewer({ story, onBack, onStoryComplete }) {
       const res = await generatePage({ story_id: storyId, user_action: continueText });
       setPages(res.memory.pages);
       setContinueText('');
+      voice.resetTranscript();
       setCurrentPage(res.memory.pages.length - 1);
+
+      if (res.page_text) {
+        tts.play(res.page_text);
+      }
 
       if (res.story_complete) {
         setCompleted(true);
@@ -55,8 +79,8 @@ function BookViewer({ story, onBack, onStoryComplete }) {
           title: res.memory.title || '',
           cover_image: res.memory.cover_image || '',
         });
-        setTimeout(() => setEndingPhase('closing'), 2000);
-        setTimeout(() => setEndingPhase('ended'), 3500);
+        setTimeout(() => setEndingPhase('closing'), 8000);
+        setTimeout(() => setEndingPhase('ended'), 9500);
       }
     } catch (err) {
       console.error('Continue failed:', err);
@@ -146,6 +170,46 @@ function BookViewer({ story, onBack, onStoryComplete }) {
               <div className="page-content-text">
                 <div className="page-text-ornament">&#10022;</div>
                 <p className="story-text">{page.text}</p>
+
+                {isLastPage && !completed && (
+                  <div className="page-continue">
+                    <button
+                      className={`page-mic-btn ${voice.isListening ? 'page-mic-btn--listening' : ''}`}
+                      onClick={() => voice.isListening ? voice.stopListening() : voice.startListening()}
+                      disabled={isGenerating}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                      </svg>
+                    </button>
+
+                    <div className="page-transcript">
+                      {continueText && !voice.isListening && (
+                        <span className="page-transcript-final">{continueText}</span>
+                      )}
+                      {voice.isListening && (
+                        <span className="page-transcript-interim">
+                          {voice.interimTranscript || 'Listening...'}
+                        </span>
+                      )}
+                      {!continueText && !voice.isListening && (
+                        <span className="page-transcript-hint">What happens next?</span>
+                      )}
+                    </div>
+
+                    <button
+                      className="page-continue-btn"
+                      onClick={handleContinue}
+                      disabled={!continueText.trim() || isGenerating}
+                    >
+                      {isGenerating ? 'Generating...' : 'Continue Story'}
+                    </button>
+
+                    {voice.error && <p className="page-voice-error">{voice.error}</p>}
+                  </div>
+                )}
+
                 <div className="page-number">{currentPage + 1}</div>
               </div>
             </div>
@@ -181,28 +245,6 @@ function BookViewer({ story, onBack, onStoryComplete }) {
           &rarr;
         </button>
       </div>
-
-      {/* Continue story — only on last page of an active story */}
-      {isLastPage && !completed && (
-        <div className="continue-section">
-          <input
-            className="continue-input"
-            type="text"
-            placeholder="What happens next?"
-            value={continueText}
-            onChange={(e) => setContinueText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleContinue()}
-            disabled={isGenerating}
-          />
-          <button
-            className="continue-button"
-            onClick={handleContinue}
-            disabled={!continueText.trim() || isGenerating}
-          >
-            {isGenerating ? 'Generating...' : 'Continue Story'}
-          </button>
-        </div>
-      )}
 
       {/* Completed story — viewed from library */}
       {isLastPage && completed && !endingPhase && (
